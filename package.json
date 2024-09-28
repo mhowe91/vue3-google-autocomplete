@@ -4,7 +4,7 @@
   "description": "Vue3 component to get organized payload of Place name, city, state, country and lat-long",
   "version": "0.0.5",
   "type": "module",
-  "author": "Aman Upadhyay",
+  "author": "Matt Howe",
   "files": [
     "dist"
   ],
@@ -41,6 +41,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/NightWiing/vue3-google-autocomplete.git"
+    "url": "https://github.com/mhowe91/vue3-google-autocomplete.git"
   }
 }
