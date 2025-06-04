@@ -1,5 +1,5 @@
-import { defineComponent as P, ref as c, onMounted as B, nextTick as M, onBeforeUnmount as S, openBlock as x, createElementBlock as C, normalizeClass as F } from "vue";
-const G = ["placeholder"], V = /* @__PURE__ */ P({
+import { defineComponent as A, ref as d, onMounted as P, nextTick as C, onBeforeUnmount as M, openBlock as S, createElementBlock as x, normalizeClass as F } from "vue";
+const G = ["placeholder"], j = /* @__PURE__ */ A({
   __name: "GoogleAutocomplete",
   props: {
     apiKey: {
@@ -40,46 +40,97 @@ const G = ["placeholder"], V = /* @__PURE__ */ P({
     types: {
       type: Array,
       default: () => []
+    },
+    // Location bias options for distance-based filtering
+    locationBias: {
+      type: Object,
+      default: null,
+      validator: (t) => t ? t.center && typeof t.center.lat == "number" && typeof t.center.lng == "number" || t.bounds && t.bounds.north && t.bounds.south && t.bounds.east && t.bounds.west : !0
+    },
+    // Radius in meters for circular location bias
+    radius: {
+      type: Number,
+      default: null,
+      validator: (t) => t === null || t > 0 && t <= 5e4
+    },
+    // Strict bounds - if true, only return results within the specified area
+    strictBounds: {
+      type: Boolean,
+      default: !1
     }
   },
   emits: ["update:modelValue", "set"],
-  setup(n, { emit: b }) {
-    const r = b, o = n, i = c(), e = c(), d = c(!1), h = () => new Promise((a, s) => {
+  setup(t, { emit: h }) {
+    const r = h, a = t, u = d(), e = d(), p = d(!1), B = () => new Promise((l, o) => {
       if (window.google && window.google.maps && window.google.maps.places)
-        a();
-      else if (!d.value) {
-        d.value = !0;
-        const t = document.createElement("script");
-        t.setAttribute(
+        l();
+      else if (!p.value) {
+        p.value = !0;
+        const n = document.createElement("script");
+        n.setAttribute(
           "src",
-          `https://maps.googleapis.com/maps/api/js?key=${o.apiKey}&libraries=places&v=weekly&callback=initMap`
+          `https://maps.googleapis.com/maps/api/js?key=${a.apiKey}&libraries=places&v=weekly&callback=initMap`
         ), window.initMap = () => {
-          a();
-        }, t.onerror = async (u) => {
-          s(u);
-        }, document.head.appendChild(t);
+          l();
+        }, n.onerror = async (s) => {
+          o(s);
+        }, document.head.appendChild(n);
       }
     }), k = () => {
-      if (i.value) {
-        const a = google.maps.places, s = new a.Autocomplete(i.value, {
-          fields: o.fields,
-          types: o.types,
-          strictBounds: !1
-        });
-        s.addListener("place_changed", async () => {
-          var m, f, g, y, w;
-          e.value = await s.getPlace();
-          const t = await e.value.geometry.location.lat(), u = await e.value.geometry.location.lng();
-          let _ = "", p = "", v = "";
-          for (const l of (m = e.value) == null ? void 0 : m.address_components)
-            l.types.includes("locality") ? _ = await l.long_name : l.types.includes("administrative_area_level_1") ? p = await l.long_name : l.types.includes("country") && (v = await l.long_name);
-          const A = {
-            name: (f = e.value) == null ? void 0 : f.name,
+      if (u.value) {
+        const l = google.maps.places, o = {
+          fields: a.fields,
+          types: a.types,
+          strictBounds: a.strictBounds
+        };
+        if (a.locationBias) {
+          if (a.locationBias.center) {
+            const s = new google.maps.LatLng(
+              a.locationBias.center.lat,
+              a.locationBias.center.lng
+            );
+            a.radius ? o.locationBias = {
+              center: s,
+              radius: a.radius
+            } : o.locationBias = s;
+          } else if (a.locationBias.bounds) {
+            const s = new google.maps.LatLngBounds(
+              new google.maps.LatLng(a.locationBias.bounds.south, a.locationBias.bounds.west),
+              new google.maps.LatLng(a.locationBias.bounds.north, a.locationBias.bounds.east)
+            );
+            o.locationBias = s;
+          }
+        } else
+          a.radius && navigator.geolocation && navigator.geolocation.getCurrentPosition(
+            (s) => {
+              const c = new google.maps.LatLng(
+                s.coords.latitude,
+                s.coords.longitude
+              );
+              o.locationBias = {
+                center: c,
+                radius: a.radius
+              };
+            },
+            (s) => {
+              console.warn("Could not get user location for radius-based filtering:", s);
+            }
+          );
+        const n = new l.Autocomplete(u.value, o);
+        n.addListener("place_changed", async () => {
+          var f, m, y, b, w;
+          e.value = await n.getPlace();
+          const s = await e.value.geometry.location.lat(), c = await e.value.geometry.location.lng();
+          let _ = "", v = "", g = "";
+          for (const i of (f = e.value) == null ? void 0 : f.address_components)
+            i.types.includes("locality") ? _ = await i.long_name : i.types.includes("administrative_area_level_1") ? v = await i.long_name : i.types.includes("country") && (g = await i.long_name);
+          const L = {
+            name: (m = e.value) == null ? void 0 : m.name,
             city: _,
-            state: p,
-            country: v,
-            latitude: t,
-            longitude: u,
+            state: v,
+            country: g,
+            latitude: s,
+            longitude: c,
             rating: e.value.rating || null,
             reviews: e.value.reviews || [],
             phone_number: e.value.formatted_phone_number || "",
@@ -97,7 +148,7 @@ const G = ["placeholder"], V = /* @__PURE__ */ P({
             curbside_pickup: e.value.curbside_pickup || !1,
             delivery: e.value.delivery || !1,
             dine_in: e.value.dine_in || !1,
-            editorial_summary: ((g = e.value.editorial_summary) == null ? void 0 : g.overview) || "",
+            editorial_summary: ((y = e.value.editorial_summary) == null ? void 0 : y.overview) || "",
             wheelchair_accessible_entrance: e.value.wheelchair_accessible_entrance || !1,
             icon: e.value.icon || "",
             icon_background_color: e.value.icon_background_color || "",
@@ -114,30 +165,30 @@ const G = ["placeholder"], V = /* @__PURE__ */ P({
             serves_wine: e.value.serves_wine || !1,
             takeout: e.value.takeout || !1,
             reservable: e.value.reservable || !1,
-            plus_code: ((y = e.value.plus_code) == null ? void 0 : y.global_code) || "",
+            plus_code: ((b = e.value.plus_code) == null ? void 0 : b.global_code) || "",
             utc_offset: e.value.utc_offset || null
           };
-          r("update:modelValue", (w = e.value) == null ? void 0 : w.name), o.isFullPayload ? r("set", e.value) : r("set", A);
+          r("update:modelValue", (w = e.value) == null ? void 0 : w.name), a.isFullPayload ? r("set", e.value) : r("set", L);
         });
       }
     };
-    return B(async () => {
+    return P(async () => {
       try {
-        await h(), await M(), k();
-      } catch (a) {
-        console.error("Failed to load Google Maps API", a);
+        await B(), await C(), k();
+      } catch (l) {
+        console.error("Failed to load Google Maps API", l);
       }
-    }), S(() => {
+    }), M(() => {
       delete window.initMap;
-    }), (a, s) => (x(), C("input", {
+    }), (l, o) => (S(), x("input", {
       ref_key: "origin",
-      ref: i,
+      ref: u,
       type: "text",
-      class: F(n.class),
-      placeholder: n.placeholder
+      class: F(t.class),
+      placeholder: t.placeholder
     }, null, 10, G));
   }
 });
 export {
-  V as GoogleAutocomplete
+  j as GoogleAutocomplete
 };

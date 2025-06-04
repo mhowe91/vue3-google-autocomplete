@@ -50,6 +50,32 @@ const props = defineProps({
   types: {
     type: Array,
     default: () => [],
+  },
+  // Location bias options for distance-based filtering
+  locationBias: {
+    type: Object,
+    default: null,
+    validator: (value: any) => {
+      if (!value) return true
+      // Validate that it has required properties for location bias
+      return (
+        (value.center && typeof value.center.lat === 'number' && typeof value.center.lng === 'number') ||
+        (value.bounds && value.bounds.north && value.bounds.south && value.bounds.east && value.bounds.west)
+      )
+    }
+  },
+  // Radius in meters for circular location bias
+  radius: {
+    type: Number,
+    default: null,
+    validator: (value: number) => {
+      return value === null || (value > 0 && value <= 50000) // Google Places API limit is 50km
+    }
+  },
+  // Strict bounds - if true, only return results within the specified area
+  strictBounds: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -87,11 +113,61 @@ const loadApi = () => {
 const setPlacesListener = () => {
   if (origin.value) {
     const places = google.maps.places
-    const autocompleteInstance = new places.Autocomplete(origin.value, {
+    
+    // Build autocomplete options
+    const autocompleteOptions: any = {
       fields: props.fields,
       types: props.types,
-      strictBounds: false
-    })
+      strictBounds: props.strictBounds
+    }
+    
+    // Add location bias if provided
+    if (props.locationBias) {
+      if (props.locationBias.center) {
+        // Circular location bias with optional radius
+        const center = new google.maps.LatLng(
+          props.locationBias.center.lat,
+          props.locationBias.center.lng
+        )
+        
+        if (props.radius) {
+          // Create a circle for location bias with radius
+          autocompleteOptions.locationBias = {
+            center: center,
+            radius: props.radius
+          }
+        } else {
+          // Just use center point for location bias
+          autocompleteOptions.locationBias = center
+        }
+      } else if (props.locationBias.bounds) {
+        // Rectangular bounds for location bias
+        const bounds = new google.maps.LatLngBounds(
+          new google.maps.LatLng(props.locationBias.bounds.south, props.locationBias.bounds.west),
+          new google.maps.LatLng(props.locationBias.bounds.north, props.locationBias.bounds.east)
+        )
+        autocompleteOptions.locationBias = bounds
+      }
+    } else if (props.radius && navigator.geolocation) {
+      // If only radius is provided, try to use user's current location
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const center = new google.maps.LatLng(
+            position.coords.latitude,
+            position.coords.longitude
+          )
+          autocompleteOptions.locationBias = {
+            center: center,
+            radius: props.radius
+          }
+        },
+        (error) => {
+          console.warn('Could not get user location for radius-based filtering:', error)
+        }
+      )
+    }
+    
+    const autocompleteInstance = new places.Autocomplete(origin.value, autocompleteOptions)
 
     autocompleteInstance.addListener('place_changed', async () => {
       place.value = await autocompleteInstance.getPlace()
