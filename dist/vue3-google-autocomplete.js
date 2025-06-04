@@ -1,4 +1,4 @@
-import { defineComponent as A, ref as d, onMounted as P, nextTick as C, onBeforeUnmount as M, openBlock as S, createElementBlock as x, normalizeClass as F } from "vue";
+import { defineComponent as A, ref as _, onMounted as P, nextTick as x, onBeforeUnmount as C, openBlock as M, createElementBlock as S, normalizeClass as F } from "vue";
 const G = ["placeholder"], j = /* @__PURE__ */ A({
   __name: "GoogleAutocomplete",
   props: {
@@ -61,76 +61,79 @@ const G = ["placeholder"], j = /* @__PURE__ */ A({
   },
   emits: ["update:modelValue", "set"],
   setup(t, { emit: h }) {
-    const r = h, a = t, u = d(), e = d(), p = d(!1), B = () => new Promise((l, o) => {
+    const c = h, a = t, d = _(), e = _(), g = _(!1), B = () => new Promise((n, s) => {
       if (window.google && window.google.maps && window.google.maps.places)
-        l();
-      else if (!p.value) {
-        p.value = !0;
-        const n = document.createElement("script");
-        n.setAttribute(
+        n();
+      else if (!g.value) {
+        g.value = !0;
+        const l = document.createElement("script");
+        l.setAttribute(
           "src",
           `https://maps.googleapis.com/maps/api/js?key=${a.apiKey}&libraries=places&v=weekly&callback=initMap`
         ), window.initMap = () => {
-          l();
-        }, n.onerror = async (s) => {
-          o(s);
-        }, document.head.appendChild(n);
+          n();
+        }, l.onerror = async (o) => {
+          s(o);
+        }, document.head.appendChild(l);
       }
-    }), k = () => {
-      if (u.value) {
-        const l = google.maps.places, o = {
+    }), k = async () => {
+      if (d.value) {
+        const n = google.maps.places, s = {
           fields: a.fields,
           types: a.types,
           strictBounds: a.strictBounds
         };
         if (a.locationBias) {
           if (a.locationBias.center) {
-            const s = new google.maps.LatLng(
+            const o = new google.maps.LatLng(
               a.locationBias.center.lat,
               a.locationBias.center.lng
             );
-            a.radius ? o.locationBias = {
-              center: s,
+            a.radius ? s.locationBias = {
+              center: o,
               radius: a.radius
-            } : o.locationBias = s;
+            } : s.locationBias = o;
           } else if (a.locationBias.bounds) {
-            const s = new google.maps.LatLngBounds(
+            const o = new google.maps.LatLngBounds(
               new google.maps.LatLng(a.locationBias.bounds.south, a.locationBias.bounds.west),
               new google.maps.LatLng(a.locationBias.bounds.north, a.locationBias.bounds.east)
             );
-            o.locationBias = s;
+            s.locationBias = o;
           }
-        } else
-          a.radius && navigator.geolocation && navigator.geolocation.getCurrentPosition(
-            (s) => {
-              const c = new google.maps.LatLng(
-                s.coords.latitude,
-                s.coords.longitude
-              );
-              o.locationBias = {
-                center: c,
-                radius: a.radius
-              };
-            },
-            (s) => {
-              console.warn("Could not get user location for radius-based filtering:", s);
-            }
-          );
-        const n = new l.Autocomplete(u.value, o);
-        n.addListener("place_changed", async () => {
-          var f, m, y, b, w;
-          e.value = await n.getPlace();
-          const s = await e.value.geometry.location.lat(), c = await e.value.geometry.location.lng();
-          let _ = "", v = "", g = "";
-          for (const i of (f = e.value) == null ? void 0 : f.address_components)
-            i.types.includes("locality") ? _ = await i.long_name : i.types.includes("administrative_area_level_1") ? v = await i.long_name : i.types.includes("country") && (g = await i.long_name);
+        } else if (a.radius && navigator.geolocation)
+          try {
+            const o = await new Promise((r, u) => {
+              navigator.geolocation.getCurrentPosition(r, u, {
+                enableHighAccuracy: !0,
+                timeout: 1e4,
+                maximumAge: 3e5
+              });
+            }), p = new google.maps.LatLng(
+              o.coords.latitude,
+              o.coords.longitude
+            );
+            s.locationBias = {
+              center: p,
+              radius: a.radius
+            }, console.log("Location bias applied with user location:", o.coords.latitude, o.coords.longitude);
+          } catch (o) {
+            console.warn("Could not get user location for radius-based filtering:", o);
+          }
+        const l = new n.Autocomplete(d.value, s);
+        l.addListener("place_changed", async () => {
+          var m, f, y, b, w;
+          e.value = await l.getPlace();
+          const o = await e.value.geometry.location.lat(), p = await e.value.geometry.location.lng();
+          let r = "", u = "", v = "";
+          for (const i of (m = e.value) == null ? void 0 : m.address_components)
+            i.types.includes("locality") ? r = await i.long_name : i.types.includes("administrative_area_level_1") ? u = await i.long_name : i.types.includes("country") && (v = await i.long_name);
           const L = {
-            name: (m = e.value) == null ? void 0 : m.name,
-            city: _,
-            state: v,
-            country: g,
-            latitude: s,
-            longitude: c,
+            name: (f = e.value) == null ? void 0 : f.name,
+            city: r,
+            state: u,
+            country: v,
+            latitude: o,
+            longitude: p,
             rating: e.value.rating || null,
             reviews: e.value.reviews || [],
             phone_number: e.value.formatted_phone_number || "",
@@ -168,21 +171,21 @@ const G = ["placeholder"], j = /* @__PURE__ */ A({
             plus_code: ((b = e.value.plus_code) == null ? void 0 : b.global_code) || "",
             utc_offset: e.value.utc_offset || null
           };
-          r("update:modelValue", (w = e.value) == null ? void 0 : w.name), a.isFullPayload ? r("set", e.value) : r("set", L);
+          c("update:modelValue", (w = e.value) == null ? void 0 : w.name), a.isFullPayload ? c("set", e.value) : c("set", L);
         });
       }
     };
     return P(async () => {
       try {
-        await B(), await C(), k();
-      } catch (l) {
-        console.error("Failed to load Google Maps API", l);
+        await B(), await x(), await k();
+      } catch (n) {
+        console.error("Failed to load Google Maps API", n);
       }
-    }), M(() => {
+    }), C(() => {
       delete window.initMap;
-    }), (l, o) => (S(), x("input", {
+    }), (n, s) => (M(), S("input", {
       ref_key: "origin",
-      ref: u,
+      ref: d,
       type: "text",
       class: F(t.class),
       placeholder: t.placeholder

@@ -110,7 +110,7 @@ const loadApi = () => {
   })
 }
 
-const setPlacesListener = () => {
+const setPlacesListener = async () => {
   if (origin.value) {
     const places = google.maps.places
     
@@ -150,21 +150,27 @@ const setPlacesListener = () => {
       }
     } else if (props.radius && navigator.geolocation) {
       // If only radius is provided, try to use user's current location
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const center = new google.maps.LatLng(
-            position.coords.latitude,
-            position.coords.longitude
-          )
-          autocompleteOptions.locationBias = {
-            center: center,
-            radius: props.radius
-          }
-        },
-        (error) => {
-          console.warn('Could not get user location for radius-based filtering:', error)
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000
+          })
+        })
+        
+        const center = new google.maps.LatLng(
+          position.coords.latitude,
+          position.coords.longitude
+        )
+        autocompleteOptions.locationBias = {
+          center: center,
+          radius: props.radius
         }
-      )
+        console.log('Location bias applied with user location:', position.coords.latitude, position.coords.longitude)
+      } catch (error) {
+        console.warn('Could not get user location for radius-based filtering:', error)
+      }
     }
     
     const autocompleteInstance = new places.Autocomplete(origin.value, autocompleteOptions)
@@ -242,7 +248,7 @@ onMounted(async () => {
   try {
     await loadApi()
     await nextTick()
-    setPlacesListener()
+    await setPlacesListener()
   } catch (error) {
     console.error("Failed to load Google Maps API", error);
   }
